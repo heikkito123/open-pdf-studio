@@ -515,6 +515,8 @@
     "hideBuiltInNoOwn": "Los sellos integrados están configurados como ocultos, pero todavía no tiene sellos propios. Cree uno con Administrar plantillas de sello."
   },
   "calibration": {
+    "usePdfScale": "Usar la escala integrada del PDF (escala forzada)",
+    "usePdfScaleHelp": "Desmarque para usar su calibración en lugar de las escalas integradas del PDF.",
     "title": "Calibración de escala",
     "helpText": "Dibuje una línea de medición de longitud conocida, luego ingrese la distancia real aquí.",
     "knownDistance": "Distancia conocida:",

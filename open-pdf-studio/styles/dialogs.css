@@ -3668,6 +3668,14 @@
 
 .calibration-dialog { width: 320px; }
 
+.calibration-pdf-scale {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+
 .calibration-tabs {
   display: flex;
   border-bottom: 1px solid var(--theme-border, #e0e0e0);

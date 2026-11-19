@@ -37,6 +37,10 @@ app and are not available in the [browser version](https://open-pdf-studio.open-
 - A drawing that carries its own measuring scale (a PDF viewport with a measure
   dictionary, as CAD plots and the DWG/DXF import write it) is measured to scale
   right away, without calibrating.
+- **Use embedded PDF scale (forced scale)** is checked by default in Scale
+  Calibration. Uncheck it to use your calibration instead. The choice travels
+  with a saved PDF; the original viewport metadata is retained. Scale regions
+  and viewport annotations can still define details.
 - Per-line scale override, with fallback to the document scale.
 - Quick scale: right-click a dimension line and type a value (for example `12.3m`)
   to recalibrate.
@@ -153,6 +157,8 @@ recognize English** (for example Dutch + English).
 - A live quantities schedule that adds up counts, lengths and areas, with
   grouping, sorting, filtering, subtotals and grand totals.
 - Configurable columns, formatting and table appearance.
+- Saved tool-set subjects and measurement names stay with their own preset when
+  switching tools, including the labels used to group quantities for CSV export.
 - Place the schedule back on the page as a table, or export it as CSV or PDF.
 - Round trip of tags: a saved schedule exports with an ID column; edit the
   label, IFC category, location or count category in a spreadsheet and import

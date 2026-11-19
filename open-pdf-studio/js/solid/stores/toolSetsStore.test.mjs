@@ -144,6 +144,68 @@ test('every added annotation passes the hook: the active item applies to the nex
   state.currentTool = 'select';
 });
 
+test('switching saved measurement tools keeps each subject in the panel, annotations and CSV', async () => {
+  const doc = openDocument();
+  const props = await import('./propertiesStore.js');
+  const { zetLabelVooraf, labelVooraf, metLabelVooraf, wisLabelVooraf } = await import('../../annotations/label-vooraf.js');
+  const { buildSchedule } = await import('../../quantities/engine.js');
+  const { scheduleResultToCsv } = await import('../../quantities/schedule-csv.js');
+  const { createRoot, createEffect } = await import('solid-js');
+  const wall = { id: 'wall', type: 'measureDistance', props: { subject: 'Walls' } };
+  const pipe = { id: 'pipe', type: 'measureDistance', props: { subject: 'Pipes' } };
+  const originals = JSON.stringify([wall, pipe]);
+  wisLabelVooraf();
+  zetLabelVooraf('measureDistance', 'subject', 'General subject');
+  zetLabelVooraf('measureDistance', 'measureName', 'General name');
+  state.currentTool = 'measureDistance';
+  const dispose = createRoot(dispose => {
+    createEffect(() => doc.annotations.map(a => [a.subject, a.measureName]));
+    return dispose;
+  });
+  try {
+    for (const item of [wall, pipe, wall]) {
+      armToolSetItem(item, state.preferences);
+      await props.showToolDefaults('measureDistance');
+      assert.equal(props.annotProps.subject, item.props.subject);
+      assert.equal(props.annotProps.measureName, '', 'another tool’s name must not hide the saved subject in totals');
+      const ann = metLabelVooraf({ id: `n${doc.annotations.length}`, type: 'measureDistance', page: 1,
+        startX: 0, startY: 0, endX: 10, endY: 0, measureValue: 1000, measurePixels: 10, measureUnit: 'mm' });
+      doc.annotations.push(ann);
+      recordAdd(ann);
+      assert.equal(ann.subject, item.props.subject);
+      assert.equal(ann.measureName, '');
+    }
+    props.updateAnnotProp('subject', 'Temporary wall');
+    const custom = metLabelVooraf({ id: 'custom', type: 'measureDistance', page: 1 });
+    recordAdd(custom);
+    assert.equal(custom.subject, 'Temporary wall');
+    props.updateAnnotProp('subject', '');
+    const cleared = { id: 'cleared', type: 'measureDistance', page: 1 };
+    recordAdd(cleared);
+    assert.equal(cleared.subject, '');
+    armToolSetItem(wall, state.preferences);
+    await props.showToolDefaults('measureDistance');
+    assert.equal(props.annotProps.subject, 'Walls', 'reselecting restores the saved definition');
+    assert.equal(JSON.stringify([wall, pipe]), originals);
+    assert.deepEqual(labelVooraf('measureDistance'), { subject: 'General subject', measureName: 'General name' });
+    const result = buildSchedule(doc.annotations, { categories: ['line-based'], fields: ['label', 'length'],
+      sort: [{ field: 'label', dir: 'asc', group: true }] });
+    assert.deepEqual(result.groups.map(g => [g.key, g.rows.length]), [['Pipes', 1], ['Walls', 2]]);
+    const csv = scheduleResultToCsv(result);
+    assert.match(csv, /Walls/);
+    assert.match(csv, /Pipes/);
+    assert.doesNotMatch(csv, /General name|General subject|Temporary wall/);
+    endToolSetSession();
+    await props.showToolDefaults('measureDistance');
+    assert.equal(props.annotProps.subject, 'General subject');
+  } finally {
+    dispose();
+    endToolSetSession();
+    wisLabelVooraf();
+    state.currentTool = 'select';
+  }
+});
+
 // Review fix: the hook is for annotations DRAWN with the item. A paste or
 // duplicate while the item's tool is active is an exact copy of another
 // annotation and keeps its own properties.

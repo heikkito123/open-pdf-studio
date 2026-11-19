@@ -515,6 +515,8 @@
     "hideBuiltInNoOwn": "I timbri integrati sono impostati come nascosti, ma non hai ancora timbri personali. Creane uno con Gestisci modelli di timbro."
   },
   "calibration": {
+    "usePdfScale": "Usa la scala incorporata nel PDF (scala imposta)",
+    "usePdfScaleHelp": "Deseleziona per usare la tua calibrazione invece delle scale incorporate nel PDF.",
     "title": "Calibrazione scala",
     "helpText": "Disegnare una linea di misurazione di lunghezza nota, quindi inserire la distanza reale qui.",
     "knownDistance": "Distanza nota:",

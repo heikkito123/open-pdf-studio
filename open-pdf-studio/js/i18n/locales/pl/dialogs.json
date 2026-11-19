@@ -515,6 +515,8 @@
     "hideBuiltInNoOwn": "Wbudowane pieczątki są ustawione jako ukryte, ale nie masz jeszcze własnych pieczątek. Utwórz ją w Zarządzaj szablonami pieczątek."
   },
   "calibration": {
+    "usePdfScale": "Używaj skali osadzonej w PDF (skala wymuszona)",
+    "usePdfScaleHelp": "Odznacz, aby używać własnej kalibracji zamiast skal osadzonych w PDF.",
     "title": "Kalibracja skali",
     "helpText": "Narysuj linię pomiarową o znanej długości, a następnie wpisz tutaj rzeczywistą odległość.",
     "knownDistance": "Znana odległość:",

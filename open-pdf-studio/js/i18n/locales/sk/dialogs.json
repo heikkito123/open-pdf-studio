@@ -515,6 +515,8 @@
     "hideBuiltInNoOwn": "Vstavané pečiatky sú nastavené ako skryté, ale zatiaľ nemáte žiadne vlastné pečiatky. Vytvorte ich cez Spravovať šablóny pečiatok."
   },
   "calibration": {
+    "usePdfScale": "Použiť mierku vloženú v PDF (vynútená mierka)",
+    "usePdfScaleHelp": "Zrušte začiarknutie, ak chcete použiť vlastnú kalibráciu namiesto mierok vložených v PDF.",
     "title": "Kalibrácia mierky",
     "helpText": "Nakreslite meraciu čiaru známej dĺžky a potom sem zadajte skutočnú vzdialenosť.",
     "knownDistance": "Známa vzdialenosť:",

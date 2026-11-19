@@ -16,6 +16,7 @@
 import {
   applyItemToAnnotation, stylePrefsOverlay, prefKeyToAnnKeys, toolForType,
 } from '../annotations/tool-sets.js';
+import { isLabelVeld } from '../annotations/label-vooraf.js';
 
 let session = null;
 const listeners = new Set();
@@ -71,10 +72,29 @@ export function armToolSetItem(item, prefs, { onLayerAdded = null, formatMeasure
     prefs,
     overlay,
     snapshot,
+    labels: {},
     onLayerAdded,
     formatMeasurement,
   };
   notify();
+  return true;
+}
+
+/** Labels belong to the active item, independently of the ordinary tool defaults. */
+export function toolSetLabelDefaults(type) {
+  if (!session || session.item.type !== type) return null;
+  const props = session.item.props || {};
+  return {
+    subject: props.subject || '',
+    ...(isLabelVeld(type, 'measureName') ? { measureName: props.measureName || '' } : {}),
+    ...session.labels,
+  };
+}
+
+/** Editing a preset's current label changes this session, never another preset. */
+export function setToolSetLabel(type, key, value) {
+  if (!session || session.item.type !== type || (key !== 'subject' && !isLabelVeld(type, key))) return false;
+  session.labels[key] = typeof value === 'string' ? value.trim() : '';
   return true;
 }
 
@@ -147,6 +167,7 @@ export function applyToolSetToNewAnnotation(ann, currentTool, doc) {
     doc,
     formatMeasurement: session.formatMeasurement,
   });
+  Object.assign(ann, toolSetLabelDefaults(ann.type));
   if (r.layerAdded && typeof session.onLayerAdded === 'function') {
     try { session.onLayerAdded(); } catch (_) { /* panel refresh only */ }
   }

@@ -515,6 +515,8 @@
     "hideBuiltInNoOwn": "Stempel bawaan diatur untuk disembunyikan, tetapi Anda belum punya stempel sendiri. Buat satu melalui Kelola templat stempel."
   },
   "calibration": {
+    "usePdfScale": "Gunakan skala tertanam PDF (skala paksa)",
+    "usePdfScaleHelp": "Hapus centang untuk menggunakan kalibrasi Anda sebagai pengganti skala tertanam PDF.",
     "title": "Kalibrasi Skala",
     "helpText": "Gambar garis pengukuran dengan panjang yang diketahui, lalu masukkan jarak sebenarnya di sini.",
     "knownDistance": "Jarak yang diketahui:",

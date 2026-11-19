@@ -15,6 +15,7 @@ import {
 import { puntNaarAppRuimte, leesViewportsVanPagina, leesPdfViewports, viewportOp } from './pdf-viewports.js';
 import { pixelsPerUnitFor } from '../annotations/scale-region-scale.js';
 import { maakControle } from '../annotations/schaalcontrole.js';
+import { schaalOpPunt, schaalBronOpPunt } from '../annotations/schaal-op-punt.js';
 
 const N = (s) => PDFName.of(s);
 const PPU = (n, u = 'mm') => pixelsPerUnitFor(`1:${n}`, u);
@@ -256,6 +257,93 @@ function schaalVolgensLezer(pagina, u, v) {
   const opmaak = gekozen.lookup(N('Measure')).lookup(N('X')).lookup(0);
   return { c: opmaak.lookup(N('C')).asNumber(), bron: String(gekozen.get(N(BRON_SLEUTEL))) };
 }
+
+test('calibration survives embedded blank-unit viewports, save/reopen and unloaded pages', async () => {
+  // The conversion factors and overlapping boxes from the reported drawing,
+  // without copying its drawing content into the repository.
+  const definitions = [
+    [[14, 14, 2366, 1669], 0.35278], [[1881, 548, 2169, 797], 544.53436],
+    [[700, 42, 956, 236], 12.544], [[362, 42, 617, 236], 12.54399],
+    [[59, 42, 314, 236], 12.54988], [[64, 286, 1986, 1580], 12.55464],
+  ];
+  const lib = await PDFDocument.create();
+  for (let n = 0; n < 2; n++) {
+    const page = lib.addPage([2381, 1684]);
+    const foreign = definitions.map(([BBox, C]) => lib.context.register(lib.context.obj({
+      Type: 'Viewport', BBox, Measure: { Type: 'Measure', Subtype: 'RL', R: PDFString.of(' '),
+        X: [{ C, U: PDFString.of(' ') }], D: [{ C: 1, U: PDFString.of(' ') }] },
+    })));
+    page.node.set(N('VP'), lib.context.obj(foreign));
+  }
+  lib.getPages()[1].node.set(N('UserUnit'), lib.context.obj(2));
+  const foreignBefore = lib.getPages().map(page => vpLijst(page).map(v => v.toString()));
+  const model = { annotations: [], undoStack: [], pageUserUnits: { 2: 2 }, userUnitsGelezen: true,
+    measureScale: { pixelsPerUnit: PPU(50), unit: 'mm', method: 'ratio', scaleRatio: '1:50', usePdfScale: false },
+    pageScales: { 1: { scaleRatio: '1:100', unit: 'mm', method: 'auto-detect' } } };
+  model.pdfViewports = leesPdfViewports(lib);
+  assert.equal(model.pdfViewports[1].length, 6);
+  const point = { x: 1000, y: 500 };
+  dicht(schaalOpPunt(model, 1, point.x, point.y).pixelsPerUnit, PPU(50));
+  schrijfSchalenInPdf(lib.getPages(), model, p => p === 1);
+  for (const [i, page] of lib.getPages().entries()) {
+    assert.deepEqual(vpLijst(page).filter(v => !v.get(N(BRON_SLEUTEL))).map(v => v.toString()), foreignBefore[i]);
+    dicht(schaalVolgensLezer(page, 1000, 1184).c, (1 / PPU(50)) * (i + 1));
+  }
+  const reopened = await PDFDocument.load(await lib.save());
+  const restored = { annotations: [], undoStack: [], pageUserUnits: { 2: 2 }, userUnitsGelezen: true,
+    pdfViewports: leesPdfViewports(reopened) };
+  pasSchalenUitBestandToe(restored, reopened);
+  assert.equal(restored.measureScale.method, 'ratio');
+  assert.equal(restored.measureScale.usePdfScale, false);
+  for (const page of [1, 2]) {
+    const actual = schaalOpPunt(restored, page, point.x, point.y);
+    dicht(actual.pixelsPerUnit, PPU(50) / page);
+    assert.equal(schaalBronOpPunt(restored, page, point.x, point.y, pixelsPerUnitFor).method, actual.method);
+  }
+  // Reset removes the override on unloaded pages too, retaining all six
+  // original viewports and their data.
+  restored.measureScale = null;
+  schrijfSchalenInPdf(reopened.getPages(), restored, () => false);
+  assert.equal(leesDocumentSchaal(reopened), null);
+  for (const page of reopened.getPages()) assert.equal(leesViewportsVanPagina(page).length, 6);
+});
+
+test('page scales override metadata only with the explicit document choice', async () => {
+  for (const manual of [false, true]) {
+    const lib = await PDFDocument.create();
+    const page = lib.addPage([842, 595]);
+    page.node.set(N('VP'), lib.context.obj([{ Type: 'Viewport', BBox: [0, 0, 842, 595],
+      Measure: { Type: 'Measure', Subtype: 'RL', X: [{ C: 1 / PPU(20), U: PDFString.of('mm') }] } }]));
+    const model = { annotations: [], measureScale: { pixelsPerUnit: PPU(50), unit: 'mm', method: 'auto-detect', usePdfScale: !manual },
+      pageScales: { 1: { scaleRatio: '1:100', unit: 'mm', method: manual ? 'manual' : 'auto-detect' } },
+      pdfViewports: leesPdfViewports(lib) };
+    const expected = manual ? PPU(100) : PPU(20);
+    dicht(schaalOpPunt(model, 1, 400, 300).pixelsPerUnit, expected);
+    schrijfSchalenInPdf([page], model);
+    dicht(schaalVolgensLezer(page, 400, 300).c, 1 / expected);
+  }
+});
+
+test('PDF-scale choice round-trips without inferring an override from the calibration method', async () => {
+  for (const choice of [undefined, true, false]) {
+    const lib = await PDFDocument.create();
+    const page = lib.addPage([842, 595]);
+    page.node.set(N('VP'), lib.context.obj([{ Type: 'Viewport', BBox: [0, 0, 842, 595],
+      Measure: { Type: 'Measure', Subtype: 'RL', X: [{ C: 1 / PPU(20), U: PDFString.of('mm') }] } }]));
+    const model = { annotations: [], measureScale: { pixelsPerUnit: PPU(50), unit: 'mm', method: 'ratio',
+      ...(choice !== undefined ? { usePdfScale: choice } : {}) }, pdfViewports: leesPdfViewports(lib) };
+    const expected = choice === false ? PPU(50) : PPU(20);
+    dicht(schaalOpPunt(model, 1, 400, 300).pixelsPerUnit, expected);
+    schrijfSchalenInPdf([page], model);
+    dicht(schaalVolgensLezer(page, 400, 300).c, 1 / expected);
+    const reopened = await PDFDocument.load(await lib.save());
+    const restored = { annotations: [], undoStack: [], pdfViewports: leesPdfViewports(reopened) };
+    pasSchalenUitBestandToe(restored, reopened);
+    assert.equal(restored.measureScale.usePdfScale, choice);
+    dicht(schaalOpPunt(restored, 1, 400, 300).pixelsPerUnit, expected);
+    assert.equal(leesViewportsVanPagina(reopened.getPages()[0]).length, 1);
+  }
+});
 
 test('page scales: another reader measures with the page scale, not the document scale', async () => {
   const doc = await PDFDocument.create();

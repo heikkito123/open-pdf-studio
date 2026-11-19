@@ -2393,7 +2393,8 @@ async function handleSetMeasureScale(params) {
   const stateMod = await import('./core/state.js');
   const doc = stateMod.getActiveDocument();
   if (!doc) return { ok: false, error: 'no active document' };
-  doc.measureScale = { pixelsPerUnit, unit, method: 'manual', scaleRatio: 0 };
+  const { behoudPdfSchaalKeuze } = await import('./annotations/scale-region-scale.js');
+  doc.measureScale = behoudPdfSchaalKeuze({ pixelsPerUnit, unit, method: 'manual', scaleRatio: 0 }, doc.measureScale);
   const meas = await import('./annotations/measurement.js');
   meas.saveDocumentScale();
   meas.recalculateAllMeasurements(); // refreshes measureText everywhere + redraws

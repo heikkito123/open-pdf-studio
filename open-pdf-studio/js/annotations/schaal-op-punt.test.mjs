@@ -5,12 +5,14 @@ import {
   documentHeeftSchaal,
 } from "./schaal-op-punt.js";
 import { viewportOp } from "../pdf/pdf-viewports.js";
+import { schaalBronOpPunt } from './schaal-op-punt.js';
+import { pixelsPerUnitFor } from './scale-region-scale.js';
 
 // De schaal op een punt komt uit één vaste volgorde van bronnen (#400):
 // viewport-annotatie → schaalbalk op de pagina → viewport uit de PDF (/VP) →
-// documentschaal → schaalbalk elders. De documentschaal mag de meetschaal die
-// de PDF zelf meebrengt nooit verdringen: een blad met een plattegrond 1:100
-// en een detail 1:20 meet in het detail anders vijf keer te lang.
+// documentschaal → schaalbalk elders. Een automatisch gevonden documentschaal
+// verdringt de ingebedde detailschalen niet. Kalibratie doet dat alleen als
+// de gebruiker het gebruik van PDF-schalen expliciet uitschakelt.
 
 const PPU = (n) => 72 / (25.4 * n);
 
@@ -25,6 +27,38 @@ test("the PDF viewport wins over the document scale", () => {
   // Buiten elke viewport, en op een pagina zonder viewports: de documentschaal.
   assert.equal(schaalOpPunt(doc, 1, 900, 900).pixelsPerUnit, PPU(100));
   assert.equal(schaalOpPunt(doc, 2, 600, 200).pixelsPerUnit, PPU(100));
+});
+
+test('every calibration method respects embedded scales by default and overrides only after opting out', () => {
+  for (const method of ['reference', 'ratio', 'quick-scale', 'manual', 'scale-check']) {
+    const doc = { annotations: [], measureScale: { pixelsPerUnit: PPU(50), unit: 'mm', method, scaleRatio: '1:50' },
+      pageScales: { 1: { scaleRatio: '1:100', unit: 'mm', method: 'auto-detect' } },
+      pdfViewports: { 1: [plattegrond, detail] } };
+    assert.equal(schaalOpPunt(doc, 1, 600, 200).method, 'pdfViewport', `${method}: missing choice uses PDF metadata`);
+    doc.measureScale.usePdfScale = true;
+    assert.equal(schaalOpPunt(doc, 1, 600, 200).pixelsPerUnit, PPU(20));
+    assert.equal(schaalBronOpPunt(doc, 1, 600, 200, pixelsPerUnitFor).method, 'pdfViewport');
+    doc.measureScale.usePdfScale = false;
+    const result = schaalOpPunt(doc, 1, 600, 200);
+    assert.equal(result.pixelsPerUnit, PPU(50), method);
+    assert.equal(result.method, 'document');
+    const source = schaalBronOpPunt(doc, 1, 600, 200, pixelsPerUnitFor);
+    assert.equal(source.pixelsPerUnit, result.pixelsPerUnit);
+    assert.equal(source.bron, doc.measureScale);
+    doc.measureScale.usePdfScale = true;
+    assert.equal(schaalOpPunt(doc, 1, 600, 200).method, 'pdfViewport', 'switching back restores PDF metadata');
+    doc.measureScale = null;
+    assert.equal(schaalOpPunt(doc, 1, 600, 200).method, 'pdfViewport', 'reset restores embedded scales');
+  }
+});
+
+test('calibration remains a fallback outside embedded viewports and in PDFs without metadata', () => {
+  const doc = { annotations: [], measureScale: { pixelsPerUnit: PPU(50), unit: 'mm', method: 'ratio', usePdfScale: true },
+    pdfViewports: { 1: [detail] } };
+  assert.equal(schaalOpPunt(doc, 1, 100, 500).pixelsPerUnit, PPU(50));
+  assert.equal(schaalOpPunt(doc, 2, 600, 200).pixelsPerUnit, PPU(50));
+  doc.measureScale.usePdfScale = false;
+  assert.equal(schaalOpPunt(doc, 1, 600, 200).pixelsPerUnit, PPU(50));
 });
 
 test("a viewport with its own outline only claims the points inside that outline", () => {

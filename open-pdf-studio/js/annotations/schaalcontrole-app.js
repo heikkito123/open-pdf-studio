@@ -8,13 +8,14 @@ import { cloneAnnotation } from './factory.js';
 import { recalculateAllMeasurements, saveDocumentScale } from './measurement.js';
 import { invalidateScaleRegionCache } from './scale-region.js';
 import {
-  recordBulkModify, recordMeasureScale, recordScaleChecks,
+  recordBulkModify, recordMeasureScale, recordPageScales, recordScaleChecks,
   beginUndoTransaction, endUndoTransaction,
 } from '../core/undo-manager.js';
 import {
   maakControle, voegControleToe, herkalibreer, schaalTekstVoorPpu, kanHerkalibreren,
   normaliseerDrempels,
 } from './schaalcontrole.js';
+import { userUnitVanPagina, behoudPdfSchaalKeuze } from './scale-region-scale.js';
 
 const MEETSOORTEN = ['measureDistance', 'measureArea', 'measurePerimeter', 'measureAngle'];
 
@@ -94,14 +95,22 @@ function pasBronAan(doc, bron, ppu, eenheid) {
     recordBulkModify([ann], [voor]);
     return;
   }
+  if (method === 'document' && bron.page != null) {
+    const oud = JSON.parse(JSON.stringify(doc.pageScales || {}));
+    const nieuw = { ...oud, [bron.page]: { unit: eenheid || 'mm', method: 'manual',
+      scaleRatio: schaalTekstVoorPpu(ppu * userUnitVanPagina(doc, bron.page), eenheid || 'mm') } };
+    doc.pageScales = nieuw;
+    recordPageScales(doc, oud, nieuw);
+    return;
+  }
   // Documentschaal (of nog geen schaal).
   const oud = doc.measureScale == null ? doc.measureScale : JSON.parse(JSON.stringify(doc.measureScale));
-  doc.measureScale = {
+  doc.measureScale = behoudPdfSchaalKeuze({
     pixelsPerUnit: ppu,
     unit: eenheid || 'mm',
     method: 'scale-check',
     scaleRatio: schaalTekstVoorPpu(ppu, eenheid || 'mm') || 0,
-  };
+  }, oud);
   recordMeasureScale(oud, doc.measureScale);
   saveDocumentScale(doc);
 }

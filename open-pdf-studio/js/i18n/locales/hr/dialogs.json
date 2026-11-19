@@ -515,6 +515,8 @@
     "hideBuiltInNoOwn": "Ugrađeni pečati postavljeni su kao skriveni, ali još nemate vlastitih pečata. Izradite jedan putem Upravljanje predlošcima pečata."
   },
   "calibration": {
+    "usePdfScale": "Koristi mjerilo ugrađeno u PDF (nametnuto mjerilo)",
+    "usePdfScaleHelp": "Poništite odabir za korištenje vlastite kalibracije umjesto mjerila ugrađenih u PDF.",
     "title": "Kalibracija mjerila",
     "helpText": "Nacrtajte mjernu liniju poznate duljine, zatim ovdje unesite stvarnu udaljenost.",
     "knownDistance": "Poznata udaljenost:",

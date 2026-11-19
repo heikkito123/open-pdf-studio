@@ -32,6 +32,16 @@ export function userUnitVanPagina(doc, pageNum) {
   return geldigeUserUnit(doc?.pageUserUnits?.[pageNum]);
 }
 
+/** Embedded PDF scales are enabled unless the user explicitly opts out. */
+export function gebruiktPdfSchaal(doc) {
+  return doc?.measureScale?.usePdfScale !== false;
+}
+
+/** Calibration shortcuts retain the document's explicit PDF-scale choice. */
+export function behoudPdfSchaalKeuze(schaal, vorige) {
+  return typeof vorige?.usePdfScale === 'boolean' ? { ...schaal, usePdfScale: vorige.usePdfScale } : schaal;
+}
+
 /**
  * The document scale as it holds on one page, or null when there is none.
  *
@@ -51,14 +61,17 @@ export function userUnitVanPagina(doc, pageNum) {
  */
 export function documentSchaalOpPagina(doc, pageNum) {
   // Page scale (pagina-schalen.js): set on the thumbnails or detected from
-  // the page text; it holds for this page instead of the document scale.
+  // the page text. Ignoring embedded scales also keeps detected page scales
+  // from replacing the user's chosen document calibration.
   const pagina = doc?.pageScales?.[pageNum];
-  if (pagina && parseScaleString(pagina.scaleRatio)) {
+  const schaal = doc?.measureScale;
+  const gedetecteerd = pagina?.method === 'auto-detect' || pagina?.method === 'ocr';
+  if (pagina && parseScaleString(pagina.scaleRatio)
+      && !(gedetecteerd && schaal?.pixelsPerUnit > 0 && !gebruiktPdfSchaal(doc))) {
     const unit = pagina.unit || 'mm';
     return { pixelsPerUnit: pixelsPerUnitFor(pagina.scaleRatio, unit, userUnitVanPagina(doc, pageNum)), unit,
       method: pagina.method || 'page', scaleRatio: pagina.scaleRatio, page: true };
   }
-  const schaal = doc?.measureScale;
   if (!schaal || !(schaal.pixelsPerUnit > 0)) return null;
   const bekend = !!doc.pageUserUnits || doc.userUnitsGelezen === true;
   if (!bekend || !parseScaleString(schaal.scaleRatio)) return schaal;

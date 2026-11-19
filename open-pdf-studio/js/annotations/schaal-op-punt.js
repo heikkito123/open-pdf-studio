@@ -7,8 +7,8 @@
 // Volgorde:
 //   1. viewport-annotatie van de app die het punt bevat
 //   2. schaalbalk-annotatie op dezelfde pagina
-//   3. viewport uit de PDF zelf (/VP + /Measure: CAD-plots, de DWG/DXF-import)
-//   4. documentschaal (doc.measureScale)
+//   3. viewport uit de PDF zelf, tenzij uitgeschakeld in de kalibratiedialoog
+//   4. pagina- of documentschaal
 //   5. schaalbalk op een andere pagina
 // Het schaalgebied (scaleRegion) gaat hier nog vóór; dat zoekt de aanroeper
 // op via scale-region.js.
@@ -24,7 +24,7 @@
 // en de bruggen hem zonder importcyclus kunnen gebruiken.
 
 import { viewportOp } from '../pdf/pdf-viewports.js';
-import { documentSchaalOpPagina } from './scale-region-scale.js';
+import { documentSchaalOpPagina, gebruiktPdfSchaal } from './scale-region-scale.js';
 
 /**
  * @typedef {object} SchaalBronnen
@@ -118,10 +118,10 @@ export function schaalOpPuntUitBronnen(bronnen, doc, pageNum, x, y) {
   const balk = opPagina(bronnen.balkOpPagina, pageNum);
   if (balk) return { pixelsPerUnit: balk.pixelsPerUnit, unit: balk.unit, method: 'scaleBar' };
 
-  const vp = viewportOp(doc.pdfViewports?.[pageNum], x, y);
+  const docSchaal = documentSchaalOpPagina(doc, pageNum);
+  const vp = gebruiktPdfSchaal(doc) ? viewportOp(doc.pdfViewports?.[pageNum], x, y) : null;
   if (vp) return { pixelsPerUnit: vp.pixelsPerUnit, unit: vp.unit, method: 'pdfViewport', ...(vp.opmaak ? { opmaak: vp.opmaak } : {}) };
 
-  const docSchaal = documentSchaalOpPagina(doc, pageNum);
   if (docSchaal) {
     return { pixelsPerUnit: docSchaal.pixelsPerUnit, unit: docSchaal.unit || 'mm', method: 'document' };
   }
@@ -203,18 +203,19 @@ export function schaalBronOpPunt(doc, pageNum, x, y, ppuVoorGebied) {
   }
   const balk = opPagina(bronnen.balkOpPagina, pageNum);
   if (balk) return { pixelsPerUnit: balk.pixelsPerUnit, unit: balk.unit, method: 'scaleBar', bron: balk, sleutel: `scaleBar:${balk.id}` };
+  const docSchaal = documentSchaalOpPagina(doc, pageNum);
+  const documentBron = () => ({ pixelsPerUnit: docSchaal.pixelsPerUnit, unit: docSchaal.unit || 'mm',
+    method: 'document', bron: docSchaal.page ? doc.pageScales[pageNum] : doc.measureScale,
+    sleutel: docSchaal.page ? `page:${pageNum}` : 'document', ...(docSchaal.page ? { page: pageNum } : {}) });
   const lijst = doc.pdfViewports?.[pageNum];
-  const vp = viewportOp(lijst, x, y);
+  const vp = gebruiktPdfSchaal(doc) ? viewportOp(lijst, x, y) : null;
   if (vp) {
     return {
       pixelsPerUnit: vp.pixelsPerUnit, unit: vp.unit, method: 'pdfViewport', bron: vp, ...(vp.opmaak ? { opmaak: vp.opmaak } : {}),
       sleutel: `pdfViewport:${pageNum}:${lijst.indexOf(vp)}`,
     };
   }
-  const docSchaal = doc.measureScale;
-  if (docSchaal && docSchaal.pixelsPerUnit > 0) {
-    return { pixelsPerUnit: docSchaal.pixelsPerUnit, unit: docSchaal.unit || 'mm', method: 'document', bron: docSchaal, sleutel: 'document' };
-  }
+  if (docSchaal) return documentBron();
   if (bronnen.schaalbalken.length) {
     const eerste = bronnen.schaalbalken[0];
     return { pixelsPerUnit: eerste.pixelsPerUnit, unit: eerste.unit, method: 'scaleBar', bron: eerste, sleutel: `scaleBar:${eerste.id}` };

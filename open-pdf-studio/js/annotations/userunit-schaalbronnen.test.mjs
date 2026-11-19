@@ -81,6 +81,48 @@ test('zonder /UserUnit blijft de viewport-schaal in het paneel 72 / 25,4 / N', (
   assert.ok(bijna(ann.pixelsPerUnit, 72 / (25.4 * 50)));
 });
 
+test('a scale check updates its manual page scale, preserving the document scale and undo', async () => {
+  const { legControleVast } = await import('./schaalcontrole-app.js');
+  const { schaalBronOpPunt, schaalOpPunt } = await import('./schaal-op-punt.js');
+  const { undo, redo } = await import('../core/undo-manager.js');
+  const doc = openen([], { 1: 2 });
+  doc.measureScale = { pixelsPerUnit: 1, unit: 'mm', method: 'manual' };
+  doc.pageScales = { 1: { scaleRatio: '1:50', unit: 'mm', method: 'manual' } };
+  const before = JSON.parse(JSON.stringify(doc.pageScales));
+  const bron = schaalBronOpPunt(doc, 1, 10, 10, pixelsPerUnitFor);
+  assert.equal(bron.sleutel, 'page:1');
+  legControleVast({ bron, page: 1, p1: { x: 10, y: 10 }, p2: { x: 110, y: 10 },
+    punten: 100, bekend: 1000, eenheid: 'mm', actie: 'vervang' }, doc);
+  assert.ok(bijna(schaalOpPunt(doc, 1, 10, 10).pixelsPerUnit, 0.1, 1e-5));
+  assert.equal(doc.measureScale.pixelsPerUnit, 1, 'other pages keep their document calibration');
+  assert.notEqual(doc.pageScales[1].scaleRatio, before[1].scaleRatio);
+  const after = JSON.parse(JSON.stringify(doc.pageScales));
+  await undo();
+  assert.deepEqual(doc.pageScales, before);
+  await redo();
+  assert.deepEqual(doc.pageScales, after);
+});
+
+test('quick calibration and scale-bar synchronization retain the explicit PDF-scale choice', async () => {
+  const { setScaleFromLine } = await import('./measurement.js');
+  const { syncDocScale } = await import('./scale-bar.js');
+  const { legControleVast } = await import('./schaalcontrole-app.js');
+  const { schaalBronOpPunt } = await import('./schaal-op-punt.js');
+  for (const choice of [undefined, true, false]) {
+    const doc = openen([], {});
+    doc.measureScale = { pixelsPerUnit: 1, unit: 'mm', method: 'ratio',
+      ...(choice !== undefined ? { usePdfScale: choice } : {}) };
+    setScaleFromLine(100, 1000, 'mm');
+    assert.equal(doc.measureScale.usePdfScale, choice);
+    syncDocScale({ pixelsPerUnit: 0.2, unit: 'mm' }, doc);
+    assert.equal(doc.measureScale.usePdfScale, choice);
+    const bron = schaalBronOpPunt(doc, 1, 10, 10, pixelsPerUnitFor);
+    legControleVast({ bron, page: 1, p1: { x: 10, y: 10 }, p2: { x: 110, y: 10 },
+      punten: 100, bekend: 1000, eenheid: 'mm', actie: 'vervang' }, doc);
+    assert.equal(doc.measureScale.usePdfScale, choice);
+  }
+});
+
 test('/UserUnit 2: het paneel toont de werkelijke maat van een schaalgebied zoals erin gemeten wordt', () => {
   const ann = schaalgebied();
   selecteer(ann, { 1: 2 });

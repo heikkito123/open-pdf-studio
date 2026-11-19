@@ -11,7 +11,7 @@ import { cloneAnnotation } from '../../../annotations/factory.js';
 import { schaalUitKalibratie } from '../../../annotations/kalibratie-schaal.js';
 import { findScaleInText } from '../../../annotations/document-scale.js';
 import { leesLengte, isImperialeLengte, VOET_INCH_VOORBEELD } from '../../../core/voet-inch.js';
-import { geldigeUserUnit, userUnitVanPagina } from '../../../annotations/scale-region-scale.js';
+import { geldigeUserUnit, userUnitVanPagina, gebruiktPdfSchaal } from '../../../annotations/scale-region-scale.js';
 import { IMPERIAL_SCALE_PRESETS, isImperialScalePreset, scaleSelectOptions, scaleDisplayLabel } from '../../../annotations/scale-presets.js';
 import { schaalTekstVoorPpu } from '../../../annotations/schaalcontrole.js';
 import { standaardenVoorStelsel } from '../../../annotations/eenhedenstelsel.js';
@@ -62,6 +62,7 @@ export default function CalibrationDialog(props) {
 
   // Method tab: 'reference' or 'ratio'
   const [method, setMethod] = createSignal('reference');
+  const [usePdfScale, setUsePdfScale] = createSignal(gebruiktPdfSchaal(getActiveDocument()));
 
   // Zonder schaal op het document volgen de eenheid en de standaardschaal de
   // voorkeur Eenheden (#1158): imperiaal opent in voet met 1/4" = 1'-0".
@@ -108,7 +109,7 @@ export default function CalibrationDialog(props) {
   };
 
   function tekenReferentielijn() {
-    const restore = { unit: unit(), distance: distance() };
+    const restore = { unit: unit(), distance: distance(), usePdfScale: usePdfScale() };
     const huidig = Number(pixels()) || null;
     closeDialog('calibration');
     startScaleMeasureFlow({
@@ -133,6 +134,9 @@ export default function CalibrationDialog(props) {
     if (ms) {
       setUnit(ms.unit || 'mm');
       setRatioUnit(ms.unit || 'mm');
+      // Reopening to toggle PDF scales must retain a reference calibration,
+      // rather than replacing it with the initial 72 points per unit.
+      if (ms.pixelsPerUnit > 0 && !(refPx > 0)) setDistance(72 / ms.pixelsPerUnit);
       if ((ms.method === 'ratio' || ms.method === 'auto-detect') && typeof ms.scaleRatio === 'string' && ms.scaleRatio) {
         setMethod('ratio');
         setScalePreset(inLijst(ms.scaleRatio) ? ms.scaleRatio : 'custom');
@@ -146,6 +150,7 @@ export default function CalibrationDialog(props) {
     if (terug) {
       if (terug.unit) setUnit(terug.unit);
       if (terug.distance != null) setDistance(terug.distance);
+      if (typeof terug.usePdfScale === 'boolean') setUsePdfScale(terug.usePdfScale);
       setMethod('reference');
     }
 
@@ -219,7 +224,7 @@ export default function CalibrationDialog(props) {
           ['measureDistance', 'measureArea', 'measurePerimeter', 'measureAngle'].includes(annotation.type)
         );
         const originals = measurements.map(annotation => cloneAnnotation(annotation));
-        doc.measureScale = scaleData;
+        doc.measureScale = { ...scaleData, usePdfScale: usePdfScale() };
         recalculateAllMeasurements();
         beginUndoTransaction();
         recordBulkModify(measurements, originals);
@@ -276,6 +281,12 @@ export default function CalibrationDialog(props) {
       onClose={cancel}
       footer={footer}
     >
+      <label class="calibration-pdf-scale">
+        <input type="checkbox" checked={usePdfScale()}
+          onChange={(e) => setUsePdfScale(e.currentTarget.checked)} />
+        <span>{t('calibration.usePdfScale')}</span>
+      </label>
+      <p class="calibration-help">{t('calibration.usePdfScaleHelp')}</p>
       {/* Method tabs */}
       <div class="calibration-tabs">
         <button

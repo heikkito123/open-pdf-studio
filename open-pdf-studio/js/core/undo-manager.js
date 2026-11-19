@@ -861,7 +861,12 @@ export function setAddAnnotationHook(fn) {
  */
 export function recordAdd(annotation, options) {
   if (_addAnnotationHook && annotation && !options?.copy) {
-    try { _addAnnotationHook(annotation); } catch (e) { console.warn('Add-annotation hook failed:', e); }
+    // Tools insert before recording. Update the stored Solid proxy so live
+    // schedules see the preset's labels/style, as well as the undo snapshot.
+    const annotations = getActiveDocument()?.annotations;
+    const last = annotations?.[annotations.length - 1];
+    annotation = (last?.id === annotation.id ? last : annotations?.find(a => a.id === annotation.id)) || annotation;
+    try { batch(() => _addAnnotationHook(annotation)); } catch (e) { console.warn('Add-annotation hook failed:', e); }
   }
   execute({
     type: 'addAnnotation',

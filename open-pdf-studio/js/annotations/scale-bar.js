@@ -3,7 +3,7 @@ import { createAnnotation } from './factory.js';
 import { detectScaleInDocument, scaleFromScaleBar } from './document-scale.js';
 import { schaalOpPuntUitBronnen } from './schaal-op-punt.js';
 import { schaalBronnen } from './schaal-bronnen.js';
-import { documentSchaalOpPagina } from './scale-region-scale.js';
+import { documentSchaalOpPagina, behoudPdfSchaalKeuze } from './scale-region-scale.js';
 
 /**
  * Create a scale bar annotation at the given position.
@@ -50,9 +50,9 @@ export function createScaleBar(x, y) {
 
 /**
  * Get the effective scale for a specific point on a specific page of the
- * active document: viewport annotation → scale bar on the page → viewport
- * from the PDF itself (/VP) → doc.measureScale → scale bar elsewhere. The
- * order lives in schaal-op-punt.js; this is the shared entry point for
+ * active document: viewport annotation → scale bar on the page → enabled
+ * PDF viewport (/VP) → document/page calibration → scale
+ * bar elsewhere. The order lives in schaal-op-punt.js; this is the shared entry point for
  * getMeasureScale and the light scale bridges (stamps, systeemraster, …).
  * Returns null when nothing is known.
  *
@@ -91,5 +91,5 @@ export function syncDocScale(scaleBar, doc) {
   if (!doc) doc = getActiveDocument();
   if (!doc) return;
   const scale = scaleFromScaleBar(scaleBar);
-  if (scale) doc.measureScale = scale;
+  if (scale) doc.measureScale = behoudPdfSchaalKeuze(scale, doc.measureScale);
 }

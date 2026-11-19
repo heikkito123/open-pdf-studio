@@ -7,7 +7,7 @@ import { redrawAnnotations, redrawContinuous } from './rendering.js';
 import { savePreferences } from '../core/preferences.js';
 import { getScaleForPoint } from './scale-bar.js';
 import { getScaleFromRegion } from './scale-region.js';
-import { documentSchaalOpPagina } from './scale-region-scale.js';
+import { documentSchaalOpPagina, behoudPdfSchaalKeuze } from './scale-region-scale.js';
 import { schaalBronnen, metSchaalBronnen } from './schaal-bronnen.js';
 import { cloneAnnotation } from './factory.js';
 import { leesOpslagJson, schrijfOpslagJson, verwijderOpslag } from '../core/opslag.js';
@@ -28,8 +28,8 @@ import {
 
 // Scale calibration: pixels per unit
 // Priority: scaleRegion (innermost containing point) → viewport annotation →
-//          scaleBar on the page → PDF viewport (/VP + /Measure in the file
-//          itself, #400) → per-document scale → scaleBar elsewhere →
+//          scaleBar on the page → enabled PDF viewport (/VP + /Measure,
+//          #400) → document/page calibration → scaleBar elsewhere →
 //          legacy global → default
 // The point-bound part of that order lives in schaal-op-punt.js (via
 // getScaleForPoint), shared with the light scale bridges.
@@ -374,7 +374,7 @@ export function setScaleFromLine(pixelLength, realValue, unit, sourceAnnotation)
     ? doc.measureScale
     : JSON.parse(JSON.stringify(doc.measureScale));
   const sourceOriginal = sourceAnnotation ? cloneAnnotation(sourceAnnotation) : null;
-  doc.measureScale = { pixelsPerUnit, unit, method: 'quick-scale', scaleRatio: 0 };
+  doc.measureScale = behoudPdfSchaalKeuze({ pixelsPerUnit, unit, method: 'quick-scale', scaleRatio: 0 }, oldMeasureScale);
   saveDocumentScale();
 
   // Update default preferences so future measurements use this scale/unit

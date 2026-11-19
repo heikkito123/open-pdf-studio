@@ -2,17 +2,31 @@
 
 ## Prerequisites
 
-- [Node.js](https://nodejs.org/) 22 (the version CI uses)
-- [Rust](https://www.rust-lang.org/tools/install), stable (the app crate needs at
-  least 1.77.2)
+- [Node.js](https://nodejs.org/) 22.13 or later in the 22 series (CI uses 22),
+  or 24 or newer, as required by the locked PDF.js dependency
+- [Rust](https://www.rust-lang.org/tools/install) **1.99.1**, matching CI.
+  The workflow pins this version because Rust 1.100 breaks tauri-build 2.6.2.
 - [CMake](https://cmake.org/download/) and a C/C++ toolchain
 - System dependencies:
-  - **Linux:** `libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf`
+  - **Linux:** `libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev patchelf`,
+    `pkg-config`, `libssl-dev` and `libxdo-dev`. The older `libappindicator3-dev`
+    conflicts with the Ayatana runtime installed on Ubuntu 24.04.
   - **macOS:** Xcode Command Line Tools; universal release builds also need the
     `aarch64-apple-darwin` and `x86_64-apple-darwin` Rust targets
   - **Windows:** Visual Studio Build Tools with the C++ workload
 
 ## Development
+
+On Debian/Ubuntu, run the setup script as your normal user from the repository
+root. It uses sudo for APT, installs the pinned Rust toolchain, installs npm
+dependencies and verifies the downloaded OCR assets. It does not launch the app.
+
+```bash
+bash open-pdf-studio/scripts/setup-linux.sh
+source "$HOME/.cargo/env"
+```
+
+If the prerequisites are already installed:
 
 ```bash
 cd open-pdf-studio
@@ -60,6 +74,16 @@ npm run test:quality    # quality regression tests
 
 New unit tests go next to the code as `*.test.mjs` and are added to
 `scripts/unit-testlijst.txt`.
+
+The takeoff browser regression clicks saved measurement tools, verifies their
+subjects and calibration, and downloads the quantities CSV:
+
+```bash
+npx playwright install chromium
+node scripts/test-takeoff-tools-browser.mjs
+```
+
+Set `OPDS_TEST_PDF` to a local drawing to use it instead of the generated PDF.
 
 ## README images
 

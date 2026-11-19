@@ -76,7 +76,7 @@ test('schaalbron per punt: volgorde gelijk aan schaalOpPunt, met de bron erbij',
   dicht(regio.pixelsPerUnit, PPU(20));
   assert.equal(schaalBronOpPunt(doc, 1, 50, 50, pixelsPerUnitFor).sleutel, 'scaleRegion:groot');
   assert.equal(schaalBronOpPunt(doc, 2, 50, 50, pixelsPerUnitFor).sleutel, 'viewport:vp');
-  assert.equal(schaalBronOpPunt(doc, 3, 50, 50, pixelsPerUnitFor).sleutel, 'pdfViewport:3:0');
+  assert.equal(schaalBronOpPunt(doc, 3, 50, 50, pixelsPerUnitFor).sleutel, 'pdfViewport:3:0', 'calibration respects embedded scales by default');
   assert.equal(schaalBronOpPunt(doc, 4, 50, 50, pixelsPerUnitFor).sleutel, 'document');
   assert.equal(schaalBronOpPunt({ annotations: [] }, 1, 1, 1, pixelsPerUnitFor), null);
   // Zonder schaalgebied geeft het dezelfde schaal als schaalOpPunt.

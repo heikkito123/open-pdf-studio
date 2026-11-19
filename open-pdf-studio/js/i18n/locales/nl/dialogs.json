@@ -496,6 +496,8 @@
     "hideBuiltInNoOwn": "Ingebouwde stempels staan op verbergen, maar u hebt nog geen eigen stempels. Maak er een via Stempelsjablonen beheren."
   },
   "calibration": {
+    "usePdfScale": "Ingebedde PDF-schaal gebruiken (afgedwongen schaal)",
+    "usePdfScaleHelp": "Schakel dit uit om uw kalibratie te gebruiken in plaats van de ingebedde PDF-schalen.",
     "title": "Schaalcalibratie",
     "helpText": "Teken een meetlijn van bekende lengte en voer vervolgens de werkelijke afstand hier in.",
     "knownDistance": "Bekende afstand:",

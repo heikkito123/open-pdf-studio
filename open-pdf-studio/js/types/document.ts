@@ -20,6 +20,8 @@ export interface MeasureScale {
   unit: string;
   method: string;
   scaleRatio: number;
+  /** Defaults to true; false explicitly ignores the PDF's embedded measuring scales. */
+  usePdfScale?: boolean;
 }
 
 export interface TextEdit {

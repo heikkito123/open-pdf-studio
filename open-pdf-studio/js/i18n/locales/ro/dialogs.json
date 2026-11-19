@@ -515,6 +515,8 @@
     "hideBuiltInNoOwn": "Ștampilele integrate sunt setate ca ascunse, dar nu aveți încă ștampile proprii. Creați una din Gestionare sabloane de stampila."
   },
   "calibration": {
+    "usePdfScale": "Utilizează scara încorporată în PDF (scară impusă)",
+    "usePdfScaleHelp": "Debifați pentru a utiliza calibrarea proprie în locul scărilor încorporate în PDF.",
     "title": "Calibrare scara",
     "helpText": "Desenati o linie de masurare de lungime cunoscuta, apoi introduceti distanta reala aici.",
     "knownDistance": "Distanță cunoscută:",

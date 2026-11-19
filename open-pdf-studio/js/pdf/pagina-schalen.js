@@ -1,7 +1,9 @@
 // Page scales: a drawing scale per page (1:100 on a plan, 1:20 on a details
 // sheet), shown on the thumbnails and set there, detected from each page's
 // text. A page scale goes before the document scale for that page; scale
-// regions and viewports on the page still go before it (schaal-op-punt.js).
+// regions and viewport annotations still go before it (schaal-op-punt.js).
+// Embedded PDF viewports take priority by default. Only the explicit choice
+// to ignore them allows calibration to override the file's scales.
 //
 // doc.pageScales: { [pageNum]: { scaleRatio: '1:100', unit: 'mm', method } }
 //   method 'manual' (set by the user), 'auto-detect' (page text) or 'ocr'.

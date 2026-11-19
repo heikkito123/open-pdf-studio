@@ -68,6 +68,7 @@ import { leesLengte } from '../../core/voet-inch.js';
 import { inktPaneelWaarden, inktPropWaarde } from '../../annotations/pressure-ink-panel.js';
 import { setStatusWithHistory, statusHistory } from '../../review/status-history.js';
 import { isLabelVeld, zetLabelVooraf, labelVooraf } from '../../annotations/label-vooraf.js';
+import { toolSetLabelDefaults, setToolSetLabel } from '../../tools/tool-set-session.js';
 
 // Types whose single 'color' control IS their stroke colour and which render
 // via `strokeColor || color`. For these, the 'color' control must mirror onto
@@ -1675,6 +1676,7 @@ function applyAnnotProp(key, value) {
     // Apply to synthetic for immediate panel feedback.
     applyPropToAnnotation(currentAnnotation, key, value);
     setAnnotProps(key, value);
+    if (setToolSetLabel(currentAnnotation.type, key, value)) return;
     // Het label van een meting (#1055) gaat mee naar de volgende metingen van
     // deze sessie; het is geen opgeslagen stijl.
     if (isLabelVeld(currentAnnotation.type, key)) {
@@ -2441,7 +2443,7 @@ export async function showToolDefaults(toolName, overrides = {}, shouldShow = nu
   }
 
   if (typeof shouldShow === 'function' && !shouldShow()) return false;
-  Object.assign(synthetic, labelVooraf(annType), overrides);
+  Object.assign(synthetic, toolSetLabelDefaults(annType) ?? labelVooraf(annType), overrides);
   storeShowProperties(synthetic);
   return true;
 }
